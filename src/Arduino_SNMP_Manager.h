@@ -153,8 +153,7 @@ bool SNMPManager::loop()
     {
         return false;
     }
-    receivePacket(_udp->parsePacket());
-    return true;
+    return receivePacket(_udp->parsePacket());
 }
 
 void SNMPManager::printPacket(int len)
