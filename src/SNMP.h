@@ -18,26 +18,25 @@ class SNMP
         //TODO: throw exception when get no response from oid
         String getString(const char *oid, short int timeout, IPAddress targetIp)
         {
+            this->config();//throw corrupted error when put in the constructor...
             int time = millis();
             char value[50];
             char *valueResponse = value;
-            _snmp = SNMPManager(_community);
-            _snmp.setUDP(&_udp);
-            _snmp.begin();
             _callback = _snmp.addStringHandler(targetIp, oid, &valueResponse);
-            send(targetIp);
+            this->send(targetIp);
             while(!_snmp.loop()){
                 if((millis()-time)/1000 >= timeout)
                     return "";
             }
             return String(valueResponse);
         }
-        int getInt(const char *oid, short int timeout, IPAddress targetIp)
+        int getInteger(const char *oid, short int timeout, IPAddress targetIp)
         {
+            this->config();
             int time = millis();
             int value;
             _callback = _snmp.addIntegerHandler(targetIp, oid, &value);
-            send(targetIp);
+            this->send(targetIp);
             while(!_snmp.loop()){
                 if((millis()-time)/1000 >= timeout)
                     return 0;
@@ -46,10 +45,11 @@ class SNMP
         }
         
         float getFloat(const char *oid, short int timeout, IPAddress targetIp){
+            this->config();
             int time=millis();
             float value;
             _callback = _snmp.addFloatHandler(targetIp, oid, &value);
-            send(targetIp);
+            this->send(targetIp);
             while(!_snmp.loop()){
                 if((millis()-time)/1000 >= timeout)
                     return 0.0;
@@ -58,20 +58,55 @@ class SNMP
         }
         //response on ticks
         uint32_t getTimestamp(const char *oid, short int timeout, IPAddress targetIp){
+            this->config();
             int time = millis();
             uint32_t value;
             _callback = _snmp.addTimestampHandler(targetIp, oid, &value);
-            send(targetIp);
+            this->send(targetIp);
             while(!_snmp.loop()){
                 if((millis()-time)/1000 >= timeout)
                     return 0.0;
             }
             return value;
         }
-        OIDCallback getOid(const char *oid, short int timeout, IPAddress targetIp);
-        uint64_t getCounter64(const char *oid, short int timeout, IPAddress targetIp);
-        uint32_t getCounter43(const char *oid, short int timeout, IPAddress targetIp);
-        uint32_t getGuage(const char *oid, short int timeout, IPAddress targetIp);
+        uint64_t getCounter64(const char *oid, short int timeout, IPAddress targetIp)
+        {
+            this->config();
+            int time= millis();
+            uint64_t value;
+            _callback = _snmp.addCounter64Handler(targetIp, oid, &value);
+            this->send(targetIp);
+            while(!_snmp.loop()){
+                if((millis()-time)/1000 >= timeout)
+                    return 0;
+            }
+            return value;
+        }
+        uint32_t getCounter32(const char *oid, short int timeout, IPAddress targetIp){
+            this->config();
+            int time= millis();
+            uint32_t value;
+            _callback = _snmp.addCounter32Handler(targetIp, oid, &value);
+            this->send(targetIp);
+            while(!_snmp.loop()){
+                if((millis()-time)/1000 >= timeout)
+                    return 0;
+            }
+            return value;
+        }
+        uint32_t getGauge(const char *oid, short int timeout, IPAddress targetIp){
+            this->config();
+            int time = millis();
+            uint32_t value;
+            _callback = _snmp.addGuageHandler(targetIp, oid, &value);
+            this->send(targetIp);
+            while(!_snmp.loop()){
+                if((millis()-time)/1000 >= timeout)
+                    return 0;
+            }
+            return value;
+        }
+
         bool loop(){
             return _snmp.loop();
         }
@@ -85,5 +120,10 @@ class SNMP
             _snmpRequest.setRequestID(rand() % 5555);
             _snmpRequest.sendTo(targetIp);
             _snmpRequest.clearOIDList();
+        }
+        void config(){
+            _snmp = SNMPManager(_community);
+            _snmp.setUDP(&_udp);
+            _snmp.begin();
         }
 };
