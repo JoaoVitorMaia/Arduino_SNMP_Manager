@@ -71,98 +71,72 @@ public:
     ValueCallback *addStringHandler(IPAddress ip, const char *oid, char **value)
     {
         ValueCallback *callback = new StringCallback();
-        callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-        strcpy(callback->OID, oid);
         ((StringCallback *)callback)->value = value;
-        callback->ip = ip;
-        addHandler(callback);
-        return callback;
+        return configHandler(ip, oid, callback);
     }
 
     ValueCallback *addIntegerHandler(IPAddress ip, const char *oid, int *value)
     {
         ValueCallback *callback = new IntegerCallback();
-        callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-        strcpy(callback->OID, oid);
         ((IntegerCallback *)callback)->value = value;
         ((IntegerCallback *)callback)->isFloat = false;
-        callback->ip = ip;
-        addHandler(callback);
-        return callback;
+        return configHandler(ip, oid, callback);
     }
 
     ValueCallback *addFloatHandler(IPAddress ip, const char *oid, float *value)
     {
         ValueCallback *callback = new IntegerCallback();
-        callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-        strcpy(callback->OID, oid);
         ((IntegerCallback *)callback)->value = (int *)value;
         ((IntegerCallback *)callback)->isFloat = true;
-        callback->ip = ip;
-        addHandler(callback);
-        return callback;
+        return configHandler(ip, oid, callback);
     }
 
     ValueCallback *addTimestampHandler(IPAddress ip, const char *oid, uint32_t *value)
     {
         ValueCallback *callback = new TimestampCallback();
-        callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-        strcpy(callback->OID, oid);
         ((TimestampCallback *)callback)->value = value;
-        callback->ip = ip;
-        addHandler(callback);
-        return callback;
+        return configHandler(ip, oid, callback);
     }
 
     ValueCallback *addOIDHandler(IPAddress ip, const char *oid, char *value)
     {
         ValueCallback *callback = new OIDCallback();
-        callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
         ((OIDCallback *)callback)->value = value;
-        callback->ip = ip;
-        addHandler(callback);
-        return callback;
+        return configHandler(ip, oid, callback);
     }
 
     ValueCallback *addCounter64Handler(IPAddress ip, const char *oid, uint64_t *value)
     {
         ValueCallback *callback = new Counter64Callback();
-        callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-        strcpy(callback->OID, oid);
         ((Counter64Callback *)callback)->value = value;
-        callback->ip = ip;
-        addHandler(callback);
-        return callback;
+        return configHandler(ip, oid, callback);
     }
 
     ValueCallback *addCounter32Handler(IPAddress ip, const char *oid, uint32_t *value)
     {
         ValueCallback *callback = new Counter32Callback();
-        callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-        strcpy(callback->OID, oid);
         ((Counter32Callback *)callback)->value = value;
-        callback->ip = ip;
-        addHandler(callback);
-        return callback;
+        return configHandler(ip, oid, callback);
     }
 
     ValueCallback *addGuageHandler(IPAddress ip, const char *oid, uint32_t *value)
     {
         ValueCallback *callback = new Guage32Callback();
-        callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-        strcpy(callback->OID, oid);
         ((Guage32Callback *)callback)->value = value;
-        callback->ip = ip;
-        addHandler(callback);
-        return callback;
+        return configHandler(ip, oid, callback);
     }
     ValueCallback *addNextRequestHandler(IPAddress ip, const char *oid, ValueCallback **value)
     {
         ValueCallback *callback = new StringCallback();
-        callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-        strcpy(callback->OID, oid);
         ((NextRequestOID *)callback)->value = value;
+        return configHandler(ip, oid, callback);
+    }
+
+    ValueCallback *configHandler(IPAddress ip, const char *oid, ValueCallback *callback)
+    {
+        callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
         callback->ip = ip;
+        strcpy(callback->OID, oid);
         addHandler(callback);
         return callback;
     }
@@ -234,7 +208,7 @@ public:
         return parsePacket();
     }
 
-        char OIDBuf[MAX_OID_LENGTH];
+    char OIDBuf[MAX_OID_LENGTH];
     UDP *_udp;
 
 private:
