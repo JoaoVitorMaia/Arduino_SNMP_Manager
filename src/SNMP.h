@@ -28,6 +28,7 @@ class SNMP
                 if((millis()-time)/1000 >= timeout)
                     return "";
             }
+            Serial.println(_callback->OID);
             return String(valueResponse);
         }
         int getInteger(const char *oid, short int timeout, IPAddress targetIp)
@@ -111,14 +112,14 @@ class SNMP
             return _snmp.loop();
         }
     private:
-        void send(IPAddress targetIp)
+        void send(IPAddress targetIp, ASN_TYPE_WITH_VALUE type = ASN_TYPE_WITH_VALUE::GetRequestPDU)
         {
             SNMPGet _snmpRequest = SNMPGet(_community, _version);
             _snmpRequest.addOIDPointer(_callback);
             _snmpRequest.setIP(WiFi.localIP());
             _snmpRequest.setUDP(&_udp);
             _snmpRequest.setRequestID(rand() % 5555);
-            _snmpRequest.sendTo(targetIp);
+            _snmpRequest.sendTo(targetIp, type);
             _snmpRequest.clearOIDList();
         }
         void config(){

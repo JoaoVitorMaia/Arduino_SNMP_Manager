@@ -32,6 +32,13 @@ public:
     bool overwritePrefix = false;
 };
 
+class NextRequestOID : public ValueCallback
+{
+    public:
+        NextRequestOID() : ValueCallback(ASN_TYPE::OID){};
+        ValueCallback **value;
+};
+
 class IntegerCallback : public ValueCallback
 {
 public:
@@ -113,6 +120,7 @@ public:
     ValueCallback *addCounter64Handler(IPAddress ip, const char *oid, uint64_t *value);
     ValueCallback *addCounter32Handler(IPAddress ip, const char *oid, uint32_t *value);
     ValueCallback *addGuageHandler(IPAddress ip, const char *oid, uint32_t *value);
+    ValueCallback *addNextRequestHandler(IPAddress ip, const char *oid, ValueCallback **value);
 
     void setUDP(UDP *udp);
     bool begin();
@@ -429,9 +437,9 @@ ValueCallback *SNMPManager::findCallback(IPAddress ip, const char *oid)
             else
             {
 #ifdef DEBUG
-                Serial.println(F("[DEBUG] No matching callback found."));
+                Serial.println(F("[DEBUG] No matching callback found. Must be from GetNextRequest"));
 #endif
-                break;
+                return callbacksCursor->value;
             }
         }
     }
@@ -526,7 +534,16 @@ ValueCallback *SNMPManager::addGuageHandler(IPAddress ip, const char *oid, uint3
     addHandler(callback);
     return callback;
 }
-
+ValueCallback *SNMPManager::addNextRequestHandler(IPAddress ip, const char *oid, ValueCallback **value)
+{
+    ValueCallback *callback = new StringCallback();
+    callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
+    strcpy(callback->OID, oid);
+    ((NextRequestOID *)callback)->value = value;
+    callback->ip = ip;
+    addHandler(callback);
+    return callback;
+}
 void SNMPManager::addHandler(ValueCallback *callback)
 {
     callbacksCursor = callbacks;

@@ -64,13 +64,13 @@ public:
 	ValueCallbacks *callbacksCursor = callbacks;
 
 	UDP *_udp = 0;
-	bool sendTo(IPAddress ip)
+	bool sendTo(IPAddress ip, ASN_TYPE_WITH_VALUE type)
 	{
 		if (!_udp)
 		{
 			return false;
 		}
-		if (!build())
+		if (!build(type))
 		{
 			Serial.println(F("Failed Building packet.."));
 			delete packet;
@@ -94,7 +94,7 @@ public:
 	}
 
 	ComplexType *packet = 0;
-	bool build();
+	bool build(ASN_TYPE_WITH_VALUE type);
 
 	bool version1 = false;
 	bool version2 = false;
@@ -108,7 +108,7 @@ public:
 	}
 };
 
-bool SNMPGet::build()
+bool SNMPGet::build(ASN_TYPE_WITH_VALUE type)
 {
 	// Build packet for making GetRequest
 	if (packet)
@@ -119,7 +119,7 @@ bool SNMPGet::build()
 	packet->addValueToList(new IntegerType((int)_version));
 	packet->addValueToList(new OctetType((char *)_community));
 	ComplexType *getPDU;
-	getPDU = new ComplexType(GetRequestPDU);
+	getPDU = new ComplexType(type);
 	getPDU->addValueToList(new IntegerType(requestID));
 	getPDU->addValueToList(new IntegerType(errorID));
 	getPDU->addValueToList(new IntegerType(errorIndex));
