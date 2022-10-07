@@ -108,6 +108,22 @@ class SNMP
             return value;
         }
 
+        ValueCallback *getNextOID(const char *oid, short int timeout, IPAddress target)
+        {
+            this->config();
+            int time = millis();
+            ValueCallback value(OID);
+            ValueCallback *valueResponse;
+            _callback = _snmp.addNextRequestHandler(target, oid, &valueResponse);
+            this->send(target, ASN_TYPE_WITH_VALUE::GetNextRequestPDU);
+            while(!_snmp.loop()){
+                //if((millis()-time)/1000 >= timeout)
+                  //  return 0;
+                delay(100);
+            }
+            return valueResponse;
+        }
+
         bool loop(){
             return _snmp.loop();
         }
