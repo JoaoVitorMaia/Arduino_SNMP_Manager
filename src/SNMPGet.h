@@ -1,6 +1,8 @@
 #ifndef SNMPGet_h
 #define SNMPGet_h
 
+#include "CallbackTypes.h"
+
 enum SNMPExpect
 {
 	HEADER,

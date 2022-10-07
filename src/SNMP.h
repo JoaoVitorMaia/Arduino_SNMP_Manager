@@ -1,3 +1,7 @@
+#ifndef SNMP_h
+#define SNMP_h
+#endif
+
 #include <Arduino.h>
 #include <WiFi.h>       
 #include <Arduino_SNMP_Manager.h>
