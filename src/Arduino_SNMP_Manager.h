@@ -282,6 +282,8 @@ private:
                         Serial.print(responseOID);
                         Serial.print(F(" - From IP Address: "));
                         Serial.println(responseIP);
+                        Serial.print(F("Request type:"));
+                        Serial.println(snmpgetresponse->requestType);
                         delete snmpgetresponse;
                         return false;
                     }
@@ -314,7 +316,6 @@ private:
                             Serial.print(F(" - When calling: "));
                         }
                         }
-                        Serial.println(responseOID);
                         delete snmpgetresponse;
                         snmpgetresponse = 0;
                         return false;
