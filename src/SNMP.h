@@ -30,8 +30,9 @@ class SNMP
             _snmpRequest.sendTo(targetIp);
             _snmpRequest.clearOIDList();
             _snmp.loop();
-            while(valueResponse[0] == '\0'){
-                _snmp.loop();
+            while(!_snmp.loop()){
+                Serial.println("Null, delaying 1 sec");
+                delay(1000);
             }
             return String(valueResponse);
         }
