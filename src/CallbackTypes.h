@@ -54,10 +54,10 @@ public:
     uint32_t *value;
 };
 
-class Guage32Callback : public ValueCallback
+class Gauge32Callback : public ValueCallback
 {
 public:
-    Guage32Callback() : ValueCallback(ASN_TYPE::GUAGE32){};
+    Gauge32Callback() : ValueCallback(ASN_TYPE::GAUGE32){};
     uint32_t *value;
 };
 

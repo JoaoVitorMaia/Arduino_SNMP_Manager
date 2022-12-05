@@ -13,34 +13,6 @@ class SNMP
     SNMPManager _snmp;
     WiFiUDP _udp;
     ValueCallback *_callback;
-<<<<<<< HEAD
-=======
-    public:
-        SNMP(const char *community, short snmpVersion) : _community(community), _version(snmpVersion){}
-        String getString(const char *oid, short int timeout, IPAddress targetIp)
-        {
-            //test
-            char value[50];
-            char *valueResponse = value;
-            _snmp = SNMPManager(_community);
-             SNMPGet _snmpRequest = SNMPGet(_community, _version);
-            _snmp.setUDP(&_udp);
-            _snmp.begin();
-            _callback = _snmp.addStringHandler(targetIp, oid, &valueResponse);
-            _snmpRequest.addOIDPointer(_callback);
-            _snmpRequest.setIP(WiFi.localIP());
-            _snmpRequest.setUDP(&_udp);
-            _snmpRequest.setRequestID(rand() % 5555);
-            _snmpRequest.sendTo(targetIp);
-            _snmpRequest.clearOIDList();
-            _snmp.loop();
-            while(!_snmp.loop()){
-                Serial.println("Null, delaying 1 sec");
-                delay(1000);
-            }
-            return String(valueResponse);
-        }
->>>>>>> 394f47c (minor changes)
 
 public:
     SNMP(const char *community, short snmpVersion) : _community(community), _version(snmpVersion)
@@ -110,26 +82,10 @@ public:
         this->config();
         int time = millis();
         uint32_t value;
-        _callback = _snmp.addGuageHandler(targetIp, oid, &value);
+        _callback = _snmp.addGaugeHandler(targetIp, oid, &value);
         this->send(targetIp);
         return this->waitForResponse(timeout, time) ? value : 0;
 
-    }
-
-    ValueCallback *getNextOID(const char *oid, short int timeout, IPAddress target)
-    {
-        this->config();
-        int time = millis();
-        ValueCallback value(OID);
-        ValueCallback *valueResponse;
-        _callback = _snmp.addNextRequestHandler(target, oid, &valueResponse);
-        this->send(target, ASN_TYPE_WITH_VALUE::GetNextRequestPDU);
-        while (!_snmp.loop())
-        {
-            // if((millis()-time)/1000 >= timeout)
-            //   return 0;
-        }
-        return valueResponse;
     }
 
     bool waitForResponse(int timeout, int time){
