@@ -16,6 +16,7 @@ class SNMP
         SNMP(const char *community, short snmpVersion) : _community(community), _version(snmpVersion){}
         String getString(const char *oid, short int timeout, IPAddress targetIp)
         {
+            //test
             char value[50];
             char *valueResponse = value;
             _snmp = SNMPManager(_community);
