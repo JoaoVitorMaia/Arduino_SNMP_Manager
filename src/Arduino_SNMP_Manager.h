@@ -215,7 +215,95 @@ private:
     unsigned char _packetBuffer[SNMP_PACKET_LENGTH * 3];
     bool inline receivePacket(int packetLength)
     {
-        if (!packetLength)
+        _udp->stop();
+    }
+    _udp = udp;
+    this->begin();
+}
+
+bool SNMPManager::begin()
+{
+    if (!_udp)
+        return false;
+    _udp->begin(162);
+    return true;
+}
+
+bool SNMPManager::loop()
+{
+    if (!_udp)
+    {
+        return false;
+    }
+    return receivePacket(_udp->parsePacket());
+}
+
+void SNMPManager::printPacket(int len)
+{
+    Serial.print("[DEBUG] packet: ");
+    for (int i = 0; i < len; i++)
+    {
+        Serial.printf("%02x ", _packetBuffer[i]);
+    }
+    Serial.println();
+}
+
+bool SNMPManager::testParsePacket(String testPacket)
+{
+    // Function to test sample packet, each byte to be seperated with a space:
+    // e.g. "32 02 01 01 04 06 70 75 62 6c 69 63 a2 25 02 02 0c 01 02 01 00 02 c1 00 30 19 30 17 06 11 2b 06 01 04 01 81 9e 16 02 03 01 01 01 02 03 01 00 02 02 14 9f";
+    int len = testPacket.length() + 1;
+    memset(_packetBuffer, 0, SNMP_PACKET_LENGTH * 3);
+    char charArrayPacket[len];
+    testPacket.toCharArray(charArrayPacket, len);
+    // split charArray at each ' ' and convert to uint8_t
+    char *p = strtok(charArrayPacket, " ");
+    int i = 0;
+    while (p != NULL)
+    {
+        _packetBuffer[i++] = strtoul(p, NULL, 16);
+        p = strtok(NULL, " ");
+    }
+    _packetBuffer[i] = 0; // null terminate the buffer
+#ifdef DEBUG
+    printPacket(len);
+#endif
+
+    return parsePacket();
+}
+
+bool inline SNMPManager::receivePacket(int packetLength)
+{
+    if (!packetLength)
+    {
+        return false;
+    }
+#ifdef DEBUG
+    Serial.print(F("[DEBUG] Packet Length: "));
+    Serial.print(packetLength);
+    Serial.print(F(" From Address: "));
+    Serial.println(_udp->remoteIP());
+#endif
+
+    memset(_packetBuffer, 0, SNMP_PACKET_LENGTH * 3);
+    int len = packetLength;
+    _udp->read(_packetBuffer, MIN(len, SNMP_PACKET_LENGTH));
+    _udp->flush();
+    _packetBuffer[len] = 0; // null terminate the buffer
+
+#ifdef DEBUG
+    printPacket(len);
+#endif
+
+    return parsePacket();
+}
+
+bool SNMPManager::parsePacket()
+{
+    SNMPGetResponse *snmpgetresponse = new SNMPGetResponse();
+    if (snmpgetresponse->parseFrom(_packetBuffer))
+    {
+        if (snmpgetresponse->requestType == GetResponsePDU)
         {
             return false;
         }
