@@ -66,6 +66,12 @@ public:
     uint64_t value;
 };
 
+class NetWorkAddressCallback : public ValueCallback{
+    public:
+    NetWorkAddressCallback() : ValueCallback(ASN_TYPE::NETWORK_ADDRESS){};
+    IPAddress value;
+};
+
 typedef struct ValueCallbackList
 {
     ~ValueCallbackList()

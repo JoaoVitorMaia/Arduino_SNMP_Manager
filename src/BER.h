@@ -326,7 +326,7 @@ public:
                 // FIXME: This will only encode integers upto 4 bytes. Ideall this should be a loop.
                 if (tempVal / 128 / 128 > 128)
                 {
-                    *ptr++ = ((tempVal / 128 / 128 / 128 ) | 0x80) & 0xFF;
+                    *ptr++ = ((tempVal / 128 / 128 / 128) | 0x80) & 0xFF;
                     _length += 1;
                 }
                 if (tempVal / 128 > 128)
@@ -658,8 +658,8 @@ public:
 
             buf += valueLength;
             i += valueLength;
-            //newObj->fromBuffer(newValue);
-            //            free(newValue);
+            // newObj->fromBuffer(newValue);
+            //             free(newValue);
             addValueToList(newObj);
         }
         return true;
