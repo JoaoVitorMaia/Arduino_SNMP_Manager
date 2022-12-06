@@ -277,12 +277,12 @@ bool SNMPManager::parsePacket()
                     IntegerType *value = new IntegerType();
                     if (!((IntegerCallback *)callback)->isFloat)
                     {
-                        *(((IntegerCallback *)callback)->value) = ((IntegerType *)responseContainer)->_value;
-                        value->_value = *(((IntegerCallback *)callback)->value);
+                        (((IntegerCallback *)callback)->value) = ((IntegerType *)responseContainer)->_value;
+                        value->_value = (((IntegerCallback *)callback)->value);
                     }
                     else
                     {
-                        *(((IntegerCallback *)callback)->value) = (float)(((IntegerType *)responseContainer)->_value / 10);
+                        (((IntegerCallback *)callback)->value) = (float)(((IntegerType *)responseContainer)->_value / 10);
                         value->_value = *(float *)(((IntegerCallback *)callback)->value) * 10;
                     }
                     delete value;
@@ -327,8 +327,8 @@ bool SNMPManager::parsePacket()
                     Serial.println("[DEBUG] Type: TimeStamp");
 #endif
                     TimestampType *value = new TimestampType();
-                    *(((TimestampCallback *)callback)->value) = ((TimestampType *)responseContainer)->_value;
-                    value->_value = *(((TimestampCallback *)callback)->value);
+                    (((TimestampCallback *)callback)->value) = ((TimestampType *)responseContainer)->_value;
+                    value->_value = (((TimestampCallback *)callback)->value);
                     delete value;
                 }
                 break;
@@ -342,8 +342,6 @@ bool SNMPManager::parsePacket()
                 snmpgetresponse->varBindsCursor = snmpgetresponse->varBindsCursor->next;
                 if (!snmpgetresponse->varBindsCursor->value)
                 {
-                    Serial.print(F("Bingo: "));
-                    Serial.println(((StringCallback *)callback)->value);
                     break;
                 }
                 varBindIndex++;

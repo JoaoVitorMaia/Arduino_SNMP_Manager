@@ -20,7 +20,7 @@ class IntegerCallback : public ValueCallback
 {
 public:
     IntegerCallback() : ValueCallback(INTEGER){};
-    int *value;
+    int value;
     bool isFloat = false;
 };
 
@@ -28,7 +28,7 @@ class TimestampCallback : public ValueCallback
 {
 public:
     TimestampCallback() : ValueCallback(TIMESTAMP){};
-    uint32_t *value;
+    uint32_t value;
 };
 
 class StringCallback : public ValueCallback
