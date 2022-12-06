@@ -40,7 +40,6 @@ public:
     ValueCallback *addHandler(IPAddress ip, const char *oid, ASN_TYPE type);
     void addHandlerToResult(ValueCallback *callback);
 
-
     void setUDP(UDP *udp);
     bool begin();
     bool loop();
@@ -155,7 +154,7 @@ bool SNMPManager::parsePacket()
                 Serial.print(F(" - OID: "));
                 Serial.println(responseOID);
 #endif
-                ValueCallback *callback;
+                ValueCallback *callback = 0;
                 switch (responseType)
                 {
                 case INTEGER:
@@ -178,6 +177,10 @@ bool SNMPManager::parsePacket()
                     break;
                 case COUNTER64:
                     callback = addHandler(responseIP, responseOID, COUNTER64);
+                    break;
+                case NETWORK_ADDRESS:
+                    callback = addHandler(responseIP, responseOID, NETWORK_ADDRESS);
+                    break;
                 default:
                     break;
                 }
@@ -238,8 +241,6 @@ bool SNMPManager::parsePacket()
                     strncpy(((StringCallback *)callback)->value, ((OctetType *)responseContainer)->_value, strlen(((OctetType *)responseContainer)->_value));
                     Serial.println(((OctetType *)responseContainer)->_value);
                     OctetType *value = new OctetType(((StringCallback *)callback)->value);
-                                    addHandlerToResult(callback);
-
                     delete value;
                 }
                 break;
@@ -306,6 +307,29 @@ bool SNMPManager::parsePacket()
                     delete value;
                 }
                 break;
+                case OID:
+                {
+#ifdef DEBUG
+                    Serial.println("[DEBUG] Type: OID");
+#endif
+                    OIDType *value = new OIDType();
+                    strncpy(((OIDCallback *)callback)->value, ((OIDType *)responseContainer)->_value, strlen(((OIDType *)responseContainer)->_value));
+                    Serial.println(((OIDCallback *)callback)->value);
+                    delete value;
+                }
+                case NETWORK_ADDRESS:
+                {
+#ifdef DEBUG
+                    Serial.println("[DEBUG] Type: NETWORK_ADDRESS");
+#endif
+
+                    NetworkAddress *value = new NetworkAddress();
+                    (((NetWorkAddressCallback *)callback)->value) = ((NetworkAddress *)responseContainer)->_value;
+                    value->_value = (((NetWorkAddressCallback *)callback)->value);
+                    Serial.println((((NetWorkAddressCallback *)callback)->value).toString());
+                    delete value;
+                }
+                break;
                 default:
                 {
                     Serial.print(F("Unsupported Type: "));
@@ -313,6 +337,7 @@ bool SNMPManager::parsePacket()
                 }
                 break;
                 }
+                addHandlerToResult(callback);
                 snmpgetresponse->varBindsCursor = snmpgetresponse->varBindsCursor->next;
                 if (!snmpgetresponse->varBindsCursor->value)
                 {
@@ -371,6 +396,9 @@ ValueCallback *SNMPManager::addHandler(IPAddress ip, const char *oid, ASN_TYPE t
     case OID:
         callback = new OIDCallback();
         break;
+    case NETWORK_ADDRESS:
+        callback = new NetWorkAddressCallback();
+        break;
     default:
         break;
     }
@@ -403,7 +431,6 @@ void SNMPManager::addHandlerToResult(ValueCallback *callback)
     resultsCursor = results;
     if (resultsCursor->value)
     {
-        Serial.println("has value");
         while (resultsCursor->next != 0)
         {
             resultsCursor = resultsCursor->next;
@@ -413,10 +440,9 @@ void SNMPManager::addHandlerToResult(ValueCallback *callback)
         resultsCursor->value = callback;
         resultsCursor->next = 0;
     }
-    else{
-        Serial.println("do not has value");
+    else
+    {
         results->value = callback;
-
     }
 }
 
