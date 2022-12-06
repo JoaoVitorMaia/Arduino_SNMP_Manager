@@ -20,6 +20,8 @@ enum SNMPExpect
 class SNMPGetNext
 {
 public:
+    SNMPGetNext(){};
+
 	SNMPGetNext(const char *community, short version) : _community(community), _version(version)
 	{
 		if (version == 0)

@@ -34,9 +34,12 @@ public:
     // Will store values obtained by snmp get next request
     ValueCallbacks *callbacks = new ValueCallbacks();
     ValueCallbacks *callbacksCursor = callbacks;
-    ValueCallback *findCallback(IPAddress ip, const char *oid); // Find based on responding host IP address and OID
+    ValueCallbacks *results = new ValueCallbacks();
+    ValueCallbacks *resultsCursor = results;
     ValueCallback *addNextRequestHandler(IPAddress ip, const char *oid);
     ValueCallback *addHandler(IPAddress ip, const char *oid, ASN_TYPE type);
+    void addHandlerToResult(ValueCallback *callback);
+
 
     void setUDP(UDP *udp);
     bool begin();
@@ -235,6 +238,8 @@ bool SNMPManager::parsePacket()
                     strncpy(((StringCallback *)callback)->value, ((OctetType *)responseContainer)->_value, strlen(((OctetType *)responseContainer)->_value));
                     Serial.println(((OctetType *)responseContainer)->_value);
                     OctetType *value = new OctetType(((StringCallback *)callback)->value);
+                                    addHandlerToResult(callback);
+
                     delete value;
                 }
                 break;
@@ -392,6 +397,27 @@ void SNMPManager::addHandlerToList(ValueCallback *callback)
     }
     else
         callbacks->value = callback;
+}
+void SNMPManager::addHandlerToResult(ValueCallback *callback)
+{
+    resultsCursor = results;
+    if (resultsCursor->value)
+    {
+        Serial.println("has value");
+        while (resultsCursor->next != 0)
+        {
+            resultsCursor = resultsCursor->next;
+        }
+        resultsCursor->next = new ValueCallbacks();
+        resultsCursor = resultsCursor->next;
+        resultsCursor->value = callback;
+        resultsCursor->next = 0;
+    }
+    else{
+        Serial.println("do not has value");
+        results->value = callback;
+
+    }
 }
 
 #endif
