@@ -77,8 +77,7 @@ bool SNMPManager::loop()
     {
         return false;
     }
-    receivePacket(_udp->parsePacket());
-    return true;
+    return receivePacket(_udp->parsePacket());
 }
 
 void SNMPManager::printPacket(int len)
@@ -89,30 +88,6 @@ void SNMPManager::printPacket(int len)
         Serial.printf("%02x ", _packetBuffer[i]);
     }
     Serial.println();
-}
-
-bool SNMPManager::testParsePacket(String testPacket)
-{
-    // Function to test sample packet, each byte to be seperated with a space:
-    // e.g. "32 02 01 01 04 06 70 75 62 6c 69 63 a2 25 02 02 0c 01 02 01 00 02 c1 00 30 19 30 17 06 11 2b 06 01 04 01 81 9e 16 02 03 01 01 01 02 03 01 00 02 02 14 9f";
-    int len = testPacket.length() + 1;
-    memset(_packetBuffer, 0, SNMP_PACKET_LENGTH * 3);
-    char charArrayPacket[len];
-    testPacket.toCharArray(charArrayPacket, len);
-    // split charArray at each ' ' and convert to uint8_t
-    char *p = strtok(charArrayPacket, " ");
-    int i = 0;
-    while (p != NULL)
-    {
-        _packetBuffer[i++] = strtoul(p, NULL, 16);
-        p = strtok(NULL, " ");
-    }
-    _packetBuffer[i] = 0; // null terminate the buffer
-#ifdef DEBUG
-    printPacket(len);
-#endif
-
-    return parsePacket();
 }
 
 bool inline SNMPManager::receivePacket(int packetLength)
