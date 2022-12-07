@@ -31,9 +31,6 @@ public:
     SNMPManager(){};
     SNMPManager(const char *community) : _community(community){};
     const char *_community;
-    // Will store values obtained by snmp get next request
-    ValueCallbacks *callbacks = new ValueCallbacks();
-    ValueCallbacks *callbacksCursor = callbacks;
     ValueCallbacks *results = new ValueCallbacks();
     ValueCallbacks *resultsCursor = results;
     ValueCallback *addNextRequestHandler(IPAddress ip, const char *oid);
@@ -46,8 +43,6 @@ public:
     bool testParsePacket(String testPacket);
     char OIDBuf[MAX_OID_LENGTH];
     UDP *_udp;
-    void addHandlerToList(ValueCallback *callback);
-
 private:
     unsigned char _packetBuffer[SNMP_PACKET_LENGTH * 3];
     bool inline receivePacket(int length);
@@ -186,7 +181,7 @@ bool SNMPManager::parsePacket()
                 }
                 if (!callback)
                 {
-                    Serial.print(F("Matching callback not found for recieved SNMP response. Response OID: "));
+                    Serial.print(F("Matching callback not found for received SNMP response. Response OID: "));
                     Serial.print(responseOID);
                     Serial.print(F(" - From IP Address: "));
                     Serial.println(responseIP);
@@ -239,7 +234,6 @@ bool SNMPManager::parsePacket()
                     // Otherwise move responsibility for the creation of the variable to store the value here, but this would put the onus on the caller to free and reset to null.
                     //*((StringCallback *)callback)->value = (char *)malloc(64); // Allocate memory for string, caller will need to free. Malloc updated to incoming message size.
                     strncpy(((StringCallback *)callback)->value, ((OctetType *)responseContainer)->_value, strlen(((OctetType *)responseContainer)->_value));
-                    Serial.println(((OctetType *)responseContainer)->_value);
                     OctetType *value = new OctetType(((StringCallback *)callback)->value);
                     delete value;
                 }
@@ -326,7 +320,6 @@ bool SNMPManager::parsePacket()
                     NetworkAddress *value = new NetworkAddress();
                     (((NetWorkAddressCallback *)callback)->value) = ((NetworkAddress *)responseContainer)->_value;
                     value->_value = (((NetWorkAddressCallback *)callback)->value);
-                    Serial.println((((NetWorkAddressCallback *)callback)->value).toString());
                     delete value;
                 }
                 break;
@@ -366,7 +359,6 @@ ValueCallback *SNMPManager::addNextRequestHandler(IPAddress ip, const char *oid)
     callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
     callback->ip = ip;
-    addHandlerToList(callback);
     return callback;
 }
 ValueCallback *SNMPManager::addHandler(IPAddress ip, const char *oid, ASN_TYPE type)
@@ -405,27 +397,9 @@ ValueCallback *SNMPManager::addHandler(IPAddress ip, const char *oid, ASN_TYPE t
     callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
     strcpy(callback->OID, oid);
     callback->ip = ip;
-    addHandlerToList(callback);
     return callback;
 }
 
-void SNMPManager::addHandlerToList(ValueCallback *callback)
-{
-    callbacksCursor = callbacks;
-    if (callbacksCursor->value)
-    {
-        while (callbacksCursor->next != 0)
-        {
-            callbacksCursor = callbacksCursor->next;
-        }
-        callbacksCursor->next = new ValueCallbacks();
-        callbacksCursor = callbacksCursor->next;
-        callbacksCursor->value = callback;
-        callbacksCursor->next = 0;
-    }
-    else
-        callbacks->value = callback;
-}
 void SNMPManager::addHandlerToResult(ValueCallback *callback)
 {
     resultsCursor = results;
