@@ -34,8 +34,6 @@ public:
         _snmpRequest = new SNMPGetNext(community, version);
     };
     const char *_community;
-    ValueCallbacks *results = new ValueCallbacks();
-    ValueCallbacks *resultsCursor = results;
     SNMPGetNext *_snmpRequest;
     void setUDP(UDP *udp)
     {
@@ -205,7 +203,6 @@ private:
                             Serial.print(F(" - When calling: "));
                         }
                         }
-                        Serial.println(responseOID);
                         delete snmpgetresponse;
                         snmpgetresponse = 0;
                         return NULL;
