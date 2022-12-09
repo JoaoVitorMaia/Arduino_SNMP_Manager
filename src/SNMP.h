@@ -11,6 +11,7 @@ class SNMP
     IPAddress _targetIp;
     IPAddress _agentIp;
     SNMPManager _snmp;
+    ValueCallback *_callback;
 
 public:
     SNMP(const char *community, short snmpVersion) : _community(community), _version(snmpVersion)
@@ -24,10 +25,11 @@ public:
     // TODO: throw exception when get no response from oid
     String getString(const char *oid, short int timeout, IPAddress targetIp)
     {
-        ValueCallback *callback = _snmp.addStringHandler(targetIp, oid, timeout);
-        if (!callback)
+        _callback = _snmp.addStringHandler(targetIp, oid, timeout);
+        if (!_callback)
             return "";
-        return String(((StringCallback *)callback)->value);
+        String value = ((StringCallback *)_callback)->value;
+        return value;
     }
     int getInteger(const char *oid, short int timeout, IPAddress targetIp)
     {

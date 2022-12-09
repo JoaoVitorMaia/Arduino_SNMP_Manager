@@ -33,6 +33,7 @@ class SNMPManager
     ValueCallbacks *callbacksCursor = callbacks;
     char OIDBuf[MAX_OID_LENGTH];
     UDP *_udp = 0;
+
 public:
     SNMPManager(){};
     SNMPManager(const char *community, int snmpVersion) : _community(community)
@@ -113,7 +114,7 @@ public:
         callback->ip = ip;
         addHandler(callback);
         send(ip, callback);
-        return this->receivePacket(timeout);
+       return this->receivePacket(timeout);
     }
 
     ValueCallback *addGaugeHandler(IPAddress ip, const char *oid, int timeout)
@@ -144,7 +145,6 @@ public:
         _udp->begin(162);
         return true;
     }
-
 
 private:
     unsigned char _packetBuffer[SNMP_PACKET_LENGTH * 3];
@@ -383,13 +383,13 @@ private:
         }
         Serial.println();
     }
-
     ValueCallback *findCallback(IPAddress ip, const char *oid)
     {
         callbacksCursor = callbacks;
 
         if (callbacksCursor->value)
         {
+
             while (true)
             {
                 memset(OIDBuf, 0, MAX_OID_LENGTH);
@@ -423,6 +423,10 @@ private:
         callbacksCursor = callbacks;
         if (callbacksCursor->value)
         {
+            //if its the same oid, will reuse the callback
+            if(strcmp(callbacksCursor->value->OID, callback->OID) == 0){
+                return;
+            }
             while (callbacksCursor->next != 0)
             {
                 callbacksCursor = callbacksCursor->next;
