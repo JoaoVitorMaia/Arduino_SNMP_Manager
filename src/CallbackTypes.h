@@ -9,9 +9,6 @@
 class ValueCallback
 {
 public:
-    ~ValueCallback(){
-        free(OID);
-    }
     ValueCallback(ASN_TYPE atype) : type(atype){};
     IPAddress ip;
     char *OID;
