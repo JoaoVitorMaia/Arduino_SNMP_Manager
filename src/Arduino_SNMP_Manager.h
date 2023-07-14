@@ -145,7 +145,16 @@ public:
         _udp->begin(162);
         return true;
     }
-
+    void deleteCallbackList(){
+        callbacksCursor = callbacks;
+        while(callbacksCursor != nullptr){
+            ValueCallbacks* toDelete = callbacksCursor;
+            callbacksCursor = callbacksCursor->next;
+            delete toDelete->value;
+            delete toDelete;
+        }
+        callbacks = new ValueCallbacks();
+    }
 private:
     unsigned char _packetBuffer[SNMP_PACKET_LENGTH * 3];
     void send(IPAddress ip, ValueCallback *callback)
@@ -423,10 +432,6 @@ private:
         callbacksCursor = callbacks;
         if (callbacksCursor->value)
         {
-            //if its the same oid, will reuse the callback
-            if(strcmp(callbacksCursor->value->OID, callback->OID) == 0){
-                return;
-            }
             while (callbacksCursor->next != 0)
             {
                 callbacksCursor = callbacksCursor->next;
