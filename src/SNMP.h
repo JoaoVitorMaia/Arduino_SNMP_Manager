@@ -25,11 +25,10 @@ public:
     // TODO: throw exception when get no response from oid
     String getString(const char *oid, short int timeout, IPAddress targetIp)
     {
-        ValueCallback *callback = _snmp.addStringHandler(targetIp, oid, timeout);
-        if (!callback)
+        _callback = _snmp.addStringHandler(targetIp, oid, timeout);
+        if (!_callback)
             return "";
-        String value = ((StringCallback *)callback)->value;
-        _snmp.deleteCallbackList();
+        String value = ((StringCallback *)_callback)->value;
         return value;
     }
     int getInteger(const char *oid, short int timeout, IPAddress targetIp)
@@ -45,7 +44,6 @@ public:
         ValueCallback *callback = _snmp.addFloatHandler(targetIp, oid, timeout);
         if (!callback)
             return NULL;
-        _snmp.deleteCallbackList();
         return ((IntegerCallback *)callback)->value;
     }
     uint32_t getTimestamp(const char *oid, short int timeout, IPAddress targetIp)
@@ -67,9 +65,7 @@ public:
         ValueCallback *callback = _snmp.addCounter32Handler(targetIp, oid, timeout);
         if (!callback)
             return NULL;
-        uint32_t value = ((Counter32Callback *)callback)->value;
-        _snmp.deleteCallbackList();
-        return value;
+        return ((Counter32Callback *)callback)->value;
     }
     uint32_t getGauge(const char *oid, short int timeout, IPAddress targetIp)
     {
