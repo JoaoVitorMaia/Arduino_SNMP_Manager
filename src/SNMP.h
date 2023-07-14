@@ -29,7 +29,7 @@ public:
         if (!callback)
             return "";
         String value = ((StringCallback *)callback)->value;
-        _snmp.deleteCallbackList();
+        _snmp.deleteCallback(callback->ip, callback->OID);
         return value;
     }
     int getInteger(const char *oid, short int timeout, IPAddress targetIp)
@@ -45,7 +45,6 @@ public:
         ValueCallback *callback = _snmp.addFloatHandler(targetIp, oid, timeout);
         if (!callback)
             return NULL;
-        _snmp.deleteCallbackList();
         return ((IntegerCallback *)callback)->value;
     }
     uint32_t getTimestamp(const char *oid, short int timeout, IPAddress targetIp)
@@ -68,7 +67,7 @@ public:
         if (!callback)
             return NULL;
         uint32_t value = ((Counter32Callback *)callback)->value;
-        _snmp.deleteCallbackList();
+        _snmp.deleteCallback(callback->ip, callback->OID);
         return value;
     }
     uint32_t getGauge(const char *oid, short int timeout, IPAddress targetIp)

@@ -114,7 +114,7 @@ public:
         callback->ip = ip;
         addHandler(callback);
         send(ip, callback);
-       return this->receivePacket(timeout);
+        return this->receivePacket(timeout);
     }
 
     ValueCallback *addGaugeHandler(IPAddress ip, const char *oid, int timeout)
@@ -127,6 +127,43 @@ public:
         send(ip, callback);
         return this->receivePacket(timeout);
     }
+    void deleteCallback(IPAddress ip, const char *oid)
+    {
+        callbacksCursor = callbacks;
+        ValueCallbacks *previous = nullptr;
+
+        while (callbacksCursor != nullptr)
+        {
+            if (strcmp(callbacksCursor->value->OID, oid) == 0 && callbacksCursor->value->ip == ip)
+            {
+                // Match found, delete the callback
+                ValueCallbacks *toDelete = callbacksCursor;
+
+                // Update the linked list
+                if (previous != nullptr)
+                {
+                    previous->next = callbacksCursor->next;
+                }
+                else
+                {
+                    callbacks = callbacksCursor->next;
+                }
+
+                callbacksCursor = callbacksCursor->next;
+
+                delete toDelete->value;
+                delete toDelete;
+            }
+            else
+            {
+                previous = callbacksCursor;
+                callbacksCursor = callbacksCursor->next;
+            }
+        }
+        if(callbacks == nullptr)
+            callbacks = new ValueCallbackList();
+    }
+
     void setUDP(UDP *udp)
     {
         if (_udp)
@@ -145,16 +182,7 @@ public:
         _udp->begin(162);
         return true;
     }
-    void deleteCallbackList(){
-        callbacksCursor = callbacks;
-        while(callbacksCursor != nullptr){
-            ValueCallbacks* toDelete = callbacksCursor;
-            callbacksCursor = callbacksCursor->next;
-            delete toDelete->value;
-            delete toDelete;
-        }
-        callbacks = new ValueCallbacks();
-    }
+
 private:
     unsigned char _packetBuffer[SNMP_PACKET_LENGTH * 3];
     void send(IPAddress ip, ValueCallback *callback)
