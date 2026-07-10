@@ -21,15 +21,22 @@
 
 #include "BER.h"
 #include "VarBinds.h"
+#include <vector>
 
 class ValueCallback
 {
 public:
     ValueCallback(ASN_TYPE atype) : type(atype){};
+    virtual ~ValueCallback()
+    {
+        free(OID); 
+    }
     IPAddress ip;
     char *OID;
     ASN_TYPE type;
     bool overwritePrefix = false;
+    bool received = false;
+    ASNError error = ASNError::None;
 };
 
 class IntegerCallback : public ValueCallback
