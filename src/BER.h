@@ -42,6 +42,16 @@ typedef enum ASN_TYPE_WITH_VALUE
     Trapv2PDU = 0xA7
 } ASN_TYPE;
 
+enum class ASNError : uint8_t
+{
+    None,
+    NoSuchObject   = NOSUCHOBJECT,
+    NoSuchInstance = NOSUCHINSTANCE,
+    EndOfMibView   = ENDOFMIBVIEW,
+    RequestTimedOut,
+    IncorrectType
+};
+
 // Primitive types inherits straight off the container, complex come off complexType.
 // All primitives have to serialise themselves (type, length, data), to be put straight into the packet.
 // For deserialising from the parent container we check the type, then create an object of that type and call deSerialise,
