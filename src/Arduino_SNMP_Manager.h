@@ -264,127 +264,125 @@ bool SNMPManager::parsePacket()
                     return false;
                 }
                 ASN_TYPE callbackType = callback->type;
-                if (callbackType != responseType)
+                switch (responseType)
                 {
-                    switch (responseType)
-                    {
                     case NOSUCHOBJECT:
                     {
+                        callback->error = (ASNError)NOSUCHOBJECT;
+    #ifdef DEBUG
                         Serial.print(F("No such object: "));
+    #endif
                     }
                     break;
                     case NOSUCHINSTANCE:
                     {
+                        callback->error = (ASNError)NOSUCHINSTANCE;
+    #ifdef DEBUG
                         Serial.print(F("No such instance: "));
+    #endif
                     }
                     break;
                     case ENDOFMIBVIEW:
                     {
+                        callback->error = (ASNError)ENDOFMIBVIEW;
+    #ifdef DEBUG
                         Serial.print(F("End of MIB view when calling: "));
+    #endif
+                    }
+                    break;
+                    case STRING:
+                    {
+    #ifdef DEBUG
+                        Serial.println("[DEBUG] Type: String");
+    #endif
+
+                        // Note: Requires that the size of the variable used to store the response is big enough.
+                        // Otherwise move responsibility for the creation of the variable to store the value here, but this would put the onus on the caller to free and reset to null.
+                        //*((StringCallback *)callback)->value = (char *)malloc(64); // Allocate memory for string, caller will need to free. Malloc updated to incoming message size.
+                        strncpy(*((StringCallback *)callback)->value, ((OctetType *)responseContainer)->_value, strlen(((OctetType *)responseContainer)->_value));
+                        OctetType *value = new OctetType(*((StringCallback *)callback)->value);
+                        delete value;
+                    }
+                    break;
+                    case INTEGER:
+                    {
+    #ifdef DEBUG
+                        Serial.println("[DEBUG] Type: Integer");
+    #endif
+                        IntegerType *value = new IntegerType();
+                        if (!((IntegerCallback *)callback)->isFloat)
+                        {
+                            *(((IntegerCallback *)callback)->value) = ((IntegerType *)responseContainer)->_value;
+                            value->_value = *(((IntegerCallback *)callback)->value);
+                        }
+                        else
+                        {
+                            *(((IntegerCallback *)callback)->value) = (float)(((IntegerType *)responseContainer)->_value / 10);
+                            value->_value = *(float *)(((IntegerCallback *)callback)->value) * 10;
+                        }
+                        delete value;
+                    }
+                    break;
+                    case COUNTER32:
+                    {
+    #ifdef DEBUG
+                        Serial.println("[DEBUG] Type: Counter32");
+    #endif
+                        Counter32 *value = new Counter32();
+                        *(((Counter32Callback *)callback)->value) = ((Counter32 *)responseContainer)->_value;
+                        value->_value = *(((Counter32Callback *)callback)->value);
+                        delete value;
+                    }
+                    break;
+                    case COUNTER64:
+                    {
+    #ifdef DEBUG
+                        Serial.println("[DEBUG] Type: Counter64");
+    #endif
+                        Counter64 *value = new Counter64();
+                        *(((Counter64Callback *)callback)->value) = ((Counter64 *)responseContainer)->_value;
+                        value->_value = *(((Counter64Callback *)callback)->value);
+                        delete value;
+                    }
+                    break;
+                    case GAUGE32:
+                    {
+    #ifdef DEBUG
+                        Serial.println("[DEBUG] Type: Gauge32");
+    #endif
+                        Gauge *value = new Gauge();
+                        *(((Gauge32Callback *)callback)->value) = ((Gauge *)responseContainer)->_value;
+                        value->_value = *(((Gauge32Callback *)callback)->value);
+                        delete value;
+                    }
+                    break;
+                    case TIMESTAMP:
+                    {
+    #ifdef DEBUG
+                        Serial.println("[DEBUG] Type: TimeStamp");
+    #endif
+                        TimestampType *value = new TimestampType();
+                        *(((TimestampCallback *)callback)->value) = ((TimestampType *)responseContainer)->_value;
+                        value->_value = *(((TimestampCallback *)callback)->value);
+                        delete value;
                     }
                     break;
                     default:
                     {
-                        Serial.print(F("Incorrect Callback type. Expected: "));
+    #ifdef DEBUG
+                        Serial.print(F("Unmapped callback type: "));
                         Serial.print(callbackType);
+                        Serial.printf(" from %s", callback->ip.toString().c_str());
                         Serial.print(F(" Received: "));
                         Serial.print(responseType);
                         Serial.print(F(" - When calling: "));
+                        Serial.println(responseOID);
+    #endif
+                        callback->error = ASNError::IncorrectType;
                     }
-                    }
-                    Serial.println(responseOID);
-                    delete snmpgetresponse;
-                    snmpgetresponse = 0;
-                    return false;
-                }
-                switch (callbackType)
-                {
-                case STRING:
-                {
-#ifdef DEBUG
-                    Serial.println("[DEBUG] Type: String");
-#endif
-
-                    // Note: Requires that the size of the variable used to store the response is big enough.
-                    // Otherwise move responsibility for the creation of the variable to store the value here, but this would put the onus on the caller to free and reset to null.
-                    //*((StringCallback *)callback)->value = (char *)malloc(64); // Allocate memory for string, caller will need to free. Malloc updated to incoming message size.
-                    strncpy(*((StringCallback *)callback)->value, ((OctetType *)responseContainer)->_value, strlen(((OctetType *)responseContainer)->_value));
-                    OctetType *value = new OctetType(*((StringCallback *)callback)->value);
-                    delete value;
-                }
-                break;
-                case INTEGER:
-                {
-#ifdef DEBUG
-                    Serial.println("[DEBUG] Type: Integer");
-#endif
-                    IntegerType *value = new IntegerType();
-                    if (!((IntegerCallback *)callback)->isFloat)
-                    {
-                        *(((IntegerCallback *)callback)->value) = ((IntegerType *)responseContainer)->_value;
-                        value->_value = *(((IntegerCallback *)callback)->value);
-                    }
-                    else
-                    {
-                        *(((IntegerCallback *)callback)->value) = (float)(((IntegerType *)responseContainer)->_value / 10);
-                        value->_value = *(float *)(((IntegerCallback *)callback)->value) * 10;
-                    }
-                    delete value;
-                }
-                break;
-                case COUNTER32:
-                {
-#ifdef DEBUG
-                    Serial.println("[DEBUG] Type: Counter32");
-#endif
-                    Counter32 *value = new Counter32();
-                    *(((Counter32Callback *)callback)->value) = ((Counter32 *)responseContainer)->_value;
-                    value->_value = *(((Counter32Callback *)callback)->value);
-                    delete value;
-                }
-                break;
-                case COUNTER64:
-                {
-#ifdef DEBUG
-                    Serial.println("[DEBUG] Type: Counter64");
-#endif
-                    Counter64 *value = new Counter64();
-                    *(((Counter64Callback *)callback)->value) = ((Counter64 *)responseContainer)->_value;
-                    value->_value = *(((Counter64Callback *)callback)->value);
-                    delete value;
-                }
-                break;
-                case GAUGE32:
-                {
-#ifdef DEBUG
-                    Serial.println("[DEBUG] Type: Gauge32");
-#endif
-                    Gauge *value = new Gauge();
-                    *(((Gauge32Callback *)callback)->value) = ((Gauge *)responseContainer)->_value;
-                    value->_value = *(((Gauge32Callback *)callback)->value);
-                    delete value;
-                }
-                break;
-                case TIMESTAMP:
-                {
-#ifdef DEBUG
-                    Serial.println("[DEBUG] Type: TimeStamp");
-#endif
-                    TimestampType *value = new TimestampType();
-                    *(((TimestampCallback *)callback)->value) = ((TimestampType *)responseContainer)->_value;
-                    value->_value = *(((TimestampCallback *)callback)->value);
-                    delete value;
-                }
-                break;
-                default:
-                {
-#ifdef DEBUG
-                    Serial.print(F("[DEBUG] Unsupported Type: "));
-                    Serial.print(callbackType);
-#endif
-                }
                 break;
                 }
+                callback->received = true;
                 snmpgetresponse->varBindsCursor = snmpgetresponse->varBindsCursor->next;
                 if (!snmpgetresponse->varBindsCursor->value)
                 {
