@@ -109,14 +109,22 @@ public:
     ValueCallback *addIntegerHandler(IPAddress ip, const char *oid, int *value);
     ValueCallback *addTimestampHandler(IPAddress ip, const char *oid, uint32_t *value);
     ValueCallback *addOIDHandler(IPAddress ip, const char *oid, char *value);
-    bool removeHandler(ValueCallback* callback);
-    ASNError getString(const IPAddress &ip, const char *oid, char **response, uint32_t timeout, uint32_t communityVersion);
-    ASNError getCounter32(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion);
-    ASNError getInteger(const IPAddress &ip, const char *oid, int *response,  uint32_t timeout, uint32_t communityVersion);
-    std::vector<ASNError> request(IPAddress localIP, std::vector<ValueCallback*> callbacks, short requestID, const IPAddress &destIP, uint32_t communityVersion, uint32_t timeout);
     ValueCallback *addCounter64Handler(IPAddress ip, const char *oid, uint64_t *value);
     ValueCallback *addCounter32Handler(IPAddress ip, const char *oid, uint32_t *value);
     ValueCallback *addGaugeHandler(IPAddress ip, const char *oid, uint32_t *value);
+
+    std::vector<ASNError> request(IPAddress localIP, std::vector<ValueCallback*> callbacks, short requestID, const IPAddress &destIP, uint32_t communityVersion, uint32_t timeout);
+
+    ASNError getString(const IPAddress &ip, const char *oid, char **response, uint32_t timeout, uint32_t communityVersion);
+    ASNError getCounter32(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion);
+    ASNError getCounter64(const IPAddress &ip, const char *oid, uint64_t *response,  uint32_t timeout, uint32_t communityVersion);
+    ASNError getInteger(const IPAddress &ip, const char *oid, int *response,  uint32_t timeout, uint32_t communityVersion);
+    ASNError getFloat(const IPAddress &ip, const char *oid, float *response,  uint32_t timeout, uint32_t communityVersion);
+    ASNError getTimestamp(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion);
+    ASNError getOid(const IPAddress &ip, const char *oid, char *response, uint32_t timeout, uint32_t communityVersion);
+    ASNError getGauge(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion);
+
+    bool removeHandler(ValueCallback* callback);
 
     void setUDP(UDP *udp);
     bool begin();
@@ -479,9 +487,6 @@ ValueCallback *SNMPManager::addStringHandler(IPAddress ip, const char *oid, char
     return callback;
 }
 
-ASNError SNMPManager::getString(const IPAddress &ip, const char *oid, char **response, uint32_t timeout, uint32_t communityVersion){
-    return request(WiFi.localIP(), std::vector<ValueCallback*>{addStringHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
-}
 
 ValueCallback *SNMPManager::addIntegerHandler(IPAddress ip, const char *oid, int *value)
 {
@@ -495,9 +500,6 @@ ValueCallback *SNMPManager::addIntegerHandler(IPAddress ip, const char *oid, int
     return callback;
 }
 
-ASNError SNMPManager::getInteger(const IPAddress &ip, const char *oid, int *response,  uint32_t timeout, uint32_t communityVersion){
-    return request(WiFi.localIP(), std::vector<ValueCallback*>{addIntegerHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
-}
 
 ValueCallback *SNMPManager::addFloatHandler(IPAddress ip, const char *oid, float *value)
 {
@@ -553,9 +555,6 @@ ValueCallback *SNMPManager::addCounter32Handler(IPAddress ip, const char *oid, u
     addHandler(callback);
     return callback;
 }
-ASNError SNMPManager::getCounter32(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion){
-    return request(WiFi.localIP(), std::vector<ValueCallback*>{addCounter32Handler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
-}
 ValueCallback *SNMPManager::addGaugeHandler(IPAddress ip, const char *oid, uint32_t *value)
 {
     ValueCallback *callback = new Gauge32Callback();
@@ -581,4 +580,31 @@ bool SNMPManager::removeHandler(ValueCallback* callback)
     callbacks.erase(it);      // Remove from the vector
     return true;
 }
+
+ASNError SNMPManager::getString(const IPAddress &ip, const char *oid, char **response, uint32_t timeout, uint32_t communityVersion){
+    return request(WiFi.localIP(), std::vector<ValueCallback*>{addStringHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
+}
+
+ASNError SNMPManager::getInteger(const IPAddress &ip, const char *oid, int *response,  uint32_t timeout, uint32_t communityVersion){
+    return request(WiFi.localIP(), std::vector<ValueCallback*>{addIntegerHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
+}
+ASNError SNMPManager::getCounter32(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion){
+    return request(WiFi.localIP(), std::vector<ValueCallback*>{addCounter32Handler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
+}
+ASNError  SNMPManager::getCounter64(const IPAddress &ip, const char *oid, uint64_t *response,  uint32_t timeout, uint32_t communityVersion){
+    return request(WiFi.localIP(), std::vector<ValueCallback*>{addCounter64Handler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
+}
+ASNError  SNMPManager::getFloat(const IPAddress &ip, const char *oid, float *response,  uint32_t timeout, uint32_t communityVersion){
+    return request(WiFi.localIP(), std::vector<ValueCallback*>{addFloatHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
+}
+ASNError  SNMPManager::getTimestamp(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion){
+    return request(WiFi.localIP(), std::vector<ValueCallback*>{addTimestampHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
+}
+ASNError  SNMPManager::getOid(const IPAddress &ip, const char *oid, char *response, uint32_t timeout, uint32_t communityVersion){
+    return request(WiFi.localIP(), std::vector<ValueCallback*>{addOIDHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
+}
+ASNError  SNMPManager::getGauge(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion){
+    return request(WiFi.localIP(), std::vector<ValueCallback*>{addGaugeHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
+}
+
 #endif
