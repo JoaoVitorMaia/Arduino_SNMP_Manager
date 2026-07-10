@@ -60,8 +60,7 @@ public:
 	}
 
 	void addOIDPointer(ValueCallback *callback);
-	ValueCallbacks *callbacks = new ValueCallbacks();
-	ValueCallbacks *callbacksCursor = callbacks;
+	std::vector<ValueCallback*> callbacks;
 
 	UDP *_udp = 0;
 	bool sendTo(IPAddress ip)
@@ -106,11 +105,8 @@ public:
 	bool version2 = false;
 
 	void clearOIDList()
-	{ // this just removes the list, does not kill the values in the list
-		callbacksCursor = callbacks;
-		delete callbacksCursor;
-		callbacks = new ValueCallbacks();
-		callbacksCursor = callbacks;
+	{ 
+		callbacks.clear();
 	}
 };
 
@@ -131,28 +127,15 @@ bool SNMPGet::build()
 	getPDU->addValueToList(new IntegerType(errorIndex));
 	ComplexType *varBindList = new ComplexType(STRUCTURE);
 
-	callbacksCursor = callbacks;
-	if (callbacksCursor->value)
-	{
-		while (true)
-		{
-			ComplexType *varBind = new ComplexType(STRUCTURE);
-			varBind->addValueToList(new OIDType(callbacksCursor->value->OID));
-			// Value can be null for Request payload.
-			BER_CONTAINER *value = new NullType();
-			varBind->addValueToList(value);
-			varBindList->addValueToList(varBind);
-
-			if (callbacksCursor->next)
-			{
-				callbacksCursor = callbacksCursor->next;
-			}
-			else
-			{
-				break;
-			}
-		}
-	}
+	for (ValueCallback* callback : callbacks)
+    {
+        ComplexType *varBind = new ComplexType(STRUCTURE);
+		varBind->addValueToList(new OIDType(callback->OID));
+		// Value can be null for Request payload.
+		BER_CONTAINER *value = new NullType();
+		varBind->addValueToList(value);
+		varBindList->addValueToList(varBind);
+    }
 	getPDU->addValueToList(varBindList);
 	packet->addValueToList(getPDU);
 	return true;
@@ -160,20 +143,7 @@ bool SNMPGet::build()
 
 void SNMPGet::addOIDPointer(ValueCallback *callback)
 {
-	callbacksCursor = callbacks;
-	if (callbacksCursor->value)
-	{
-		while (callbacksCursor->next != 0)
-		{
-			callbacksCursor = callbacksCursor->next;
-		}
-		callbacksCursor->next = new ValueCallbacks();
-		callbacksCursor = callbacksCursor->next;
-		callbacksCursor->value = callback;
-		callbacksCursor->next = 0;
-	}
-	else
-		callbacks->value = callback;
+	callbacks.push_back(callback);
 }
 
 #endif
