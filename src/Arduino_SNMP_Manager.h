@@ -1,8 +1,16 @@
-// #define DEBUG_BER
+#ifndef SNMP_MANAGER_H
+#define SNMP_MANAGER_H
 
-#ifndef SNMPManager_h
-#define SNMPManager_h
+#include <Arduino.h>
+#include <IPAddress.h>
+#include <Udp.h>
+#include <vector>
+#include <map>
+#include <unordered_map>
+#include <cstring>
+#include <algorithm>
 
+// Configuration macros
 #ifndef UDP_TX_PACKET_MAX_SIZE
 #define UDP_TX_PACKET_MAX_SIZE 484
 #endif
@@ -15,596 +23,145 @@
 #endif
 #endif
 
+#ifndef MAX_OID_LENGTH
+#define MAX_OID_LENGTH 128
+#endif
+
 #define MIN(X, Y) ((X < Y) ? X : Y)
 
-#include <Udp.h>
-
+// Forward declarations
 #include "BER.h"
 #include "VarBinds.h"
-#include <vector>
 
-class ValueCallback
-{
+
+//=============================================================================
+// ValueCallback Base Class
+//=============================================================================
+class ValueCallback {
 public:
-    ValueCallback(ASN_TYPE atype) : type(atype){};
-    virtual ~ValueCallback()
-    {
-        free(OID); 
+    ValueCallback(ASN_TYPE atype) : type(atype) {}
+    virtual ~ValueCallback() {
+        if (OID) {
+            free(OID);
+            OID = nullptr;
+        }
     }
+    
     IPAddress ip;
-    char *OID;
+    char* OID = nullptr;
     ASN_TYPE type;
     bool overwritePrefix = false;
     bool received = false;
     ASNError error = ASNError::None;
 };
 
-class IntegerCallback : public ValueCallback
-{
+//=============================================================================
+// Specialized Callback Classes
+//=============================================================================
+class IntegerCallback : public ValueCallback {
 public:
-    IntegerCallback() : ValueCallback(INTEGER){};
-    int *value;
+    IntegerCallback() : ValueCallback(INTEGER) {}
+    int* value = nullptr;
     bool isFloat = false;
 };
 
-class TimestampCallback : public ValueCallback
-{
+class TimestampCallback : public ValueCallback {
 public:
-    TimestampCallback() : ValueCallback(TIMESTAMP){};
-    uint32_t *value;
+    TimestampCallback() : ValueCallback(TIMESTAMP) {}
+    uint32_t* value = nullptr;
 };
 
-class StringCallback : public ValueCallback
-{
+class StringCallback : public ValueCallback {
 public:
-    StringCallback() : ValueCallback(STRING){};
-    char **value;
+    StringCallback() : ValueCallback(STRING) {}
+    char** value = nullptr;
 };
 
-class OIDCallback : public ValueCallback
-{
+class OIDCallback : public ValueCallback {
 public:
-    OIDCallback() : ValueCallback(ASN_TYPE::OID){};
-    char *value;
+    OIDCallback() : ValueCallback(ASN_TYPE::OID) {}
+    char* value = nullptr;
 };
 
-class Counter32Callback : public ValueCallback
-{
+class Counter32Callback : public ValueCallback {
 public:
-    Counter32Callback() : ValueCallback(ASN_TYPE::COUNTER32){};
-    uint32_t *value;
+    Counter32Callback() : ValueCallback(ASN_TYPE::COUNTER32) {}
+    uint32_t* value = nullptr;
 };
 
-class Gauge32Callback : public ValueCallback
-{
+class Gauge32Callback : public ValueCallback {
 public:
-    Gauge32Callback() : ValueCallback(ASN_TYPE::GAUGE32){};
-    uint32_t *value;
+    Gauge32Callback() : ValueCallback(ASN_TYPE::GAUGE32) {}
+    uint32_t* value = nullptr;
 };
 
-class Counter64Callback : public ValueCallback
-{
+class Counter64Callback : public ValueCallback {
 public:
-    Counter64Callback() : ValueCallback(ASN_TYPE::COUNTER64){};
-    uint64_t *value;
+    Counter64Callback() : ValueCallback(ASN_TYPE::COUNTER64) {}
+    uint64_t* value = nullptr;
 };
 
-#include "SNMPGet.h"
-#include "SNMPGetResponse.h"
-
-class SNMPManager
-{
+//=============================================================================
+// SNMPManager Class
+//=============================================================================
+class SNMPManager {
 public:
-    SNMPManager(){};
-    SNMPManager(const char *community) : _community(community){    
-
-    };
-    const char *_community;
-
-
-    std::vector<ValueCallback*> callbacks;
-    ValueCallback *findCallback(const IPAddress& ip, const char* oid); // Find based on responding host IP address and OID
-    ValueCallback *addFloatHandler(IPAddress ip, const char *oid, float *value);
-    ValueCallback *addStringHandler(IPAddress ip, const char *, char **); // passing in a pointer to a char*
-    ValueCallback *addIntegerHandler(IPAddress ip, const char *oid, int *value);
-    ValueCallback *addTimestampHandler(IPAddress ip, const char *oid, uint32_t *value);
-    ValueCallback *addOIDHandler(IPAddress ip, const char *oid, char *value);
-    ValueCallback *addCounter64Handler(IPAddress ip, const char *oid, uint64_t *value);
-    ValueCallback *addCounter32Handler(IPAddress ip, const char *oid, uint32_t *value);
-    ValueCallback *addGaugeHandler(IPAddress ip, const char *oid, uint32_t *value);
-
-    std::vector<ASNError> request(IPAddress localIP, std::vector<ValueCallback*> callbacks, short requestID, const IPAddress &destIP, uint32_t communityVersion, uint32_t timeout);
-
-    ASNError getString(const IPAddress &ip, const char *oid, char **response, uint32_t timeout, uint32_t communityVersion);
-    ASNError getCounter32(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion);
-    ASNError getCounter64(const IPAddress &ip, const char *oid, uint64_t *response,  uint32_t timeout, uint32_t communityVersion);
-    ASNError getInteger(const IPAddress &ip, const char *oid, int *response,  uint32_t timeout, uint32_t communityVersion);
-    ASNError getFloat(const IPAddress &ip, const char *oid, float *response,  uint32_t timeout, uint32_t communityVersion);
-    ASNError getTimestamp(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion);
-    ASNError getOid(const IPAddress &ip, const char *oid, char *response, uint32_t timeout, uint32_t communityVersion);
-    ASNError getGauge(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion);
-
-    bool removeHandler(ValueCallback* callback);
-
-    void setUDP(UDP *udp);
+    // Constructors
+    SNMPManager() : _community("public") {}
+    explicit SNMPManager(const char* community) : _community(community) {}
+    
+    // Destructor
+    ~SNMPManager() {
+        // Clean up all callbacks
+        for (auto* cb : callbacks) {
+            delete cb;
+        }
+        callbacks.clear();
+    }
+    
+    // Setup methods
+    void setUDP(UDP* udp);
     bool begin();
     bool loop();
+    
+    // Handler management
+    ValueCallback* addStringHandler(IPAddress ip, const char* oid, char** value);
+    ValueCallback* addIntegerHandler(IPAddress ip, const char* oid, int* value);
+    ValueCallback* addFloatHandler(IPAddress ip, const char* oid, float* value);
+    ValueCallback* addTimestampHandler(IPAddress ip, const char* oid, uint32_t* value);
+    ValueCallback* addOIDHandler(IPAddress ip, const char* oid, char* value);
+    ValueCallback* addCounter64Handler(IPAddress ip, const char* oid, uint64_t* value);
+    ValueCallback* addCounter32Handler(IPAddress ip, const char* oid, uint32_t* value);
+    ValueCallback* addGaugeHandler(IPAddress ip, const char* oid, uint32_t* value);
+    bool removeHandler(ValueCallback* callback);
+    
+    std::vector<ASNError> request(IPAddress localIP, std::vector<ValueCallback*> callbacks, short requestID, const IPAddress &destIP, uint32_t communityVersion, uint32_t timeout, const IPAddress &localIp);
+    
+    ASNError getString(const IPAddress& ip, const char* oid, char** response,uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
+    ASNError getInteger(const IPAddress& ip, const char* oid, int* response, uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
+    ASNError getFloat(const IPAddress& ip, const char* oid, float* response,uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
+    ASNError getTimestamp(const IPAddress& ip, const char* oid, uint32_t* response,   uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
+    ASNError getOid(const IPAddress& ip, const char* oid, char* response,uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
+    ASNError getCounter32(const IPAddress& ip, const char* oid, uint32_t* response,   uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
+    ASNError getCounter64(const IPAddress& ip, const char* oid, uint64_t* response,   uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
+    ASNError getGauge(const IPAddress& ip, const char* oid, uint32_t* response,uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
+    
     bool testParsePacket(String testPacket);
+    
+    const char* _community;
+    UDP* _udp = nullptr;
     char OIDBuf[MAX_OID_LENGTH];
-    UDP *_udp;
-    void addHandler(ValueCallback *callback);
 
 private:
     unsigned char _packetBuffer[SNMP_PACKET_LENGTH * 3];
+    std::vector<ValueCallback*> callbacks;
+    
+    // Internal methods
+    ValueCallback* findCallback(const IPAddress& ip, const char* oid);
+    void addHandler(ValueCallback* callback);
     bool inline receivePacket(int length);
     bool parsePacket();
     void printPacket(int len);
 };
 
-void SNMPManager::setUDP(UDP *udp)
-{
-    if (_udp)
-    {
-        _udp->stop();
-    }
-    _udp = udp;
-    this->begin();
-}
-
-bool SNMPManager::begin()
-{
-    if (!_udp)
-        return false;
-    _udp->begin(162);
-    return true;
-}
-
-bool SNMPManager::loop()
-{
-    if (!_udp)
-    {
-        return false;
-    }
-    receivePacket(_udp->parsePacket());
-    return true;
-}
-
-void SNMPManager::printPacket(int len)
-{
-    Serial.print("[DEBUG] packet: ");
-    for (int i = 0; i < len; i++)
-    {
-        Serial.printf("%02x ", _packetBuffer[i]);
-    }
-    Serial.println();
-}
-
-bool SNMPManager::testParsePacket(String testPacket)
-{
-    // Function to test sample packet, each byte to be separated with a space:
-    // e.g. "32 02 01 01 04 06 70 75 62 6c 69 63 a2 25 02 02 0c 01 02 01 00 02 c1 00 30 19 30 17 06 11 2b 06 01 04 01 81 9e 16 02 03 01 01 01 02 03 01 00 02 02 14 9f";
-    int len = testPacket.length() + 1;
-    memset(_packetBuffer, 0, SNMP_PACKET_LENGTH * 3);
-    char charArrayPacket[len];
-    testPacket.toCharArray(charArrayPacket, len);
-    // split charArray at each ' ' and convert to uint8_t
-    char *p = strtok(charArrayPacket, " ");
-    int i = 0;
-    while (p != NULL)
-    {
-        _packetBuffer[i++] = strtoul(p, NULL, 16);
-        p = strtok(NULL, " ");
-    }
-    _packetBuffer[i] = 0; // null terminate the buffer
-#ifdef DEBUG
-    printPacket(len);
-#endif
-
-    return parsePacket();
-}
-
-bool inline SNMPManager::receivePacket(int packetLength)
-{
-    if (!packetLength)
-    {
-        return false;
-    }
-#ifdef DEBUG
-    Serial.print(F("[DEBUG] Packet Length: "));
-    Serial.print(packetLength);
-    Serial.print(F(" From Address: "));
-    Serial.println(_udp->remoteIP());
-#endif
-
-    memset(_packetBuffer, 0, SNMP_PACKET_LENGTH * 3);
-    int len = packetLength;
-    _udp->read(_packetBuffer, MIN(len, SNMP_PACKET_LENGTH));
-    _udp->flush();
-    _packetBuffer[len] = 0; // null terminate the buffer
-
-#ifdef DEBUG
-    printPacket(len);
-#endif
-
-    return parsePacket();
-}
-
-bool SNMPManager::parsePacket()
-{
-    SNMPGetResponse *snmpgetresponse = new SNMPGetResponse();
-    if (snmpgetresponse->parseFrom(_packetBuffer))
-    {
-        if (snmpgetresponse->requestType == GetResponsePDU)
-        {
-            if (!(snmpgetresponse->version != 1 || snmpgetresponse->version != 2) || strcmp(_community, snmpgetresponse->communityString) != 0)
-            {
-                Serial.print(F("Invalid community or version - Community: "));
-                Serial.print(snmpgetresponse->communityString);
-                Serial.print(F(" - Version: "));
-                Serial.println(snmpgetresponse->version);
-                delete snmpgetresponse;
-                return false;
-            }
-#ifdef DEBUG
-            Serial.print(F("[DEBUG] Community: "));
-            Serial.println(snmpgetresponse->communityString);
-            Serial.print(F("[DEBUG] SNMP Version: "));
-            Serial.println(snmpgetresponse->version);
-#endif
-            int varBindIndex = 1;
-            snmpgetresponse->varBindsCursor = snmpgetresponse->varBinds;
-            while (true)
-            {
-                char *responseOID = snmpgetresponse->varBindsCursor->value->oid->_value;
-                IPAddress responseIP = _udp->remoteIP();
-                ASN_TYPE responseType = snmpgetresponse->varBindsCursor->value->type;
-                BER_CONTAINER *responseContainer = snmpgetresponse->varBindsCursor->value->value;
-#ifdef DEBUG
-                Serial.print(F("[DEBUG] Response from: "));
-                Serial.print(responseIP);
-                Serial.print(F(" - OID: "));
-                Serial.println(responseOID);
-#endif
-                ValueCallback *callback = findCallback(responseIP, responseOID);
-                if (!callback)
-                {
-                    Serial.print(F("Matching callback not found for received SNMP response. Response OID: "));
-                    Serial.print(responseOID);
-                    Serial.print(F(" - From IP Address: "));
-                    Serial.println(responseIP);
-                    delete snmpgetresponse;
-                    return false;
-                }
-                ASN_TYPE callbackType = callback->type;
-                switch (responseType)
-                {
-                    case NOSUCHOBJECT:
-                    {
-                        callback->error = (ASNError)NOSUCHOBJECT;
-    #ifdef DEBUG
-                        Serial.print(F("No such object: "));
-    #endif
-                    }
-                    break;
-                    case NOSUCHINSTANCE:
-                    {
-                        callback->error = (ASNError)NOSUCHINSTANCE;
-    #ifdef DEBUG
-                        Serial.print(F("No such instance: "));
-    #endif
-                    }
-                    break;
-                    case ENDOFMIBVIEW:
-                    {
-                        callback->error = (ASNError)ENDOFMIBVIEW;
-    #ifdef DEBUG
-                        Serial.print(F("End of MIB view when calling: "));
-    #endif
-                    }
-                    break;
-                    case STRING:
-                    {
-    #ifdef DEBUG
-                        Serial.println("[DEBUG] Type: String");
-    #endif
-
-                        // Note: Requires that the size of the variable used to store the response is big enough.
-                        // Otherwise move responsibility for the creation of the variable to store the value here, but this would put the onus on the caller to free and reset to null.
-                        //*((StringCallback *)callback)->value = (char *)malloc(64); // Allocate memory for string, caller will need to free. Malloc updated to incoming message size.
-                        strncpy(*((StringCallback *)callback)->value, ((OctetType *)responseContainer)->_value, strlen(((OctetType *)responseContainer)->_value));
-                        OctetType *value = new OctetType(*((StringCallback *)callback)->value);
-                        delete value;
-                    }
-                    break;
-                    case INTEGER:
-                    {
-    #ifdef DEBUG
-                        Serial.println("[DEBUG] Type: Integer");
-    #endif
-                        IntegerType *value = new IntegerType();
-                        if (!((IntegerCallback *)callback)->isFloat)
-                        {
-                            *(((IntegerCallback *)callback)->value) = ((IntegerType *)responseContainer)->_value;
-                            value->_value = *(((IntegerCallback *)callback)->value);
-                        }
-                        else
-                        {
-                            *(((IntegerCallback *)callback)->value) = (float)(((IntegerType *)responseContainer)->_value / 10);
-                            value->_value = *(float *)(((IntegerCallback *)callback)->value) * 10;
-                        }
-                        delete value;
-                    }
-                    break;
-                    case COUNTER32:
-                    {
-    #ifdef DEBUG
-                        Serial.println("[DEBUG] Type: Counter32");
-    #endif
-                        Counter32 *value = new Counter32();
-                        *(((Counter32Callback *)callback)->value) = ((Counter32 *)responseContainer)->_value;
-                        value->_value = *(((Counter32Callback *)callback)->value);
-                        delete value;
-                    }
-                    break;
-                    case COUNTER64:
-                    {
-    #ifdef DEBUG
-                        Serial.println("[DEBUG] Type: Counter64");
-    #endif
-                        Counter64 *value = new Counter64();
-                        *(((Counter64Callback *)callback)->value) = ((Counter64 *)responseContainer)->_value;
-                        value->_value = *(((Counter64Callback *)callback)->value);
-                        delete value;
-                    }
-                    break;
-                    case GAUGE32:
-                    {
-    #ifdef DEBUG
-                        Serial.println("[DEBUG] Type: Gauge32");
-    #endif
-                        Gauge *value = new Gauge();
-                        *(((Gauge32Callback *)callback)->value) = ((Gauge *)responseContainer)->_value;
-                        value->_value = *(((Gauge32Callback *)callback)->value);
-                        delete value;
-                    }
-                    break;
-                    case TIMESTAMP:
-                    {
-    #ifdef DEBUG
-                        Serial.println("[DEBUG] Type: TimeStamp");
-    #endif
-                        TimestampType *value = new TimestampType();
-                        *(((TimestampCallback *)callback)->value) = ((TimestampType *)responseContainer)->_value;
-                        value->_value = *(((TimestampCallback *)callback)->value);
-                        delete value;
-                    }
-                    break;
-                    default:
-                    {
-    #ifdef DEBUG
-                        Serial.print(F("Unmapped callback type: "));
-                        Serial.print(callbackType);
-                        Serial.printf(" from %s", callback->ip.toString().c_str());
-                        Serial.print(F(" Received: "));
-                        Serial.print(responseType);
-                        Serial.print(F(" - When calling: "));
-                        Serial.println(responseOID);
-    #endif
-                        callback->error = ASNError::IncorrectType;
-                    }
-                break;
-                }
-                callback->received = true;
-                snmpgetresponse->varBindsCursor = snmpgetresponse->varBindsCursor->next;
-                if (!snmpgetresponse->varBindsCursor->value)
-                {
-                    break;
-                }
-                varBindIndex++;
-            } // End while
-        }     // End if GetResponsePDU
-    }
-    else
-    {
-#ifndef SUPPRESS_ERROR_FAILED_PARSE
-        Serial.println(F("SNMPGETRESPONSE: FAILED TO PARSE"));
-#endif
-        delete snmpgetresponse;
-        return false;
-    }
-#ifdef DEBUG
-    Serial.println(F("[DEBUG] SNMPGETRESPONSE: SUCCESS"));
-#endif
-    delete snmpgetresponse;
-    return true;
-}
-
-ValueCallback *SNMPManager::findCallback(const IPAddress& ip, const char* oid)
-{
-    for (ValueCallback *callback : callbacks)
-    {
-        if (callback->ip == ip && strcmp(callback->OID, oid) == 0)
-        {
-            return callback;
-        }
-    }
-
-    return nullptr;
-}
-std::vector<ASNError> SNMPManager::request(IPAddress localIP, std::vector<ValueCallback*> callbacks, short requestID, const IPAddress &destIP, uint32_t communityVersion, uint32_t timeout){
-    SNMPGet request = SNMPGet(_community, communityVersion);
-    std::vector<ASNError> err;
-    request.setIP(localIP); // IP of the listening MCU
-    request.setUDP(_udp);
-    
-    for (ValueCallback* callback : callbacks) {
-        request.addOIDPointer(callback);
-    }
-    request.setRequestID(requestID);
-    request.sendTo(destIP);
-    request.clearOIDList();
-    uint32_t start = millis();
-    bool allCallbackReceived = false;
-    while ((millis() - start < (timeout*1000))) {
-        loop();
-        allCallbackReceived = true;
-        for (ValueCallback* callback : callbacks) {
-            if(!callback->received)
-                allCallbackReceived = false;
-                break;;
-        }
-        if(allCallbackReceived)
-            break;
-
-        vTaskDelay(1);
-    }
-    
-    if (!allCallbackReceived){
-#ifdef DEBUG
-        Serial.printf("Timeout requesting multiple oids from %s\n", destIP.toString().c_str());
-#endif
-        err.push_back(ASNError::RequestTimedOut);
-    }else{
-        for (ValueCallback* callback : callbacks) {
-            err.push_back(callback->error);
-        }
-    }
-    for (ValueCallback* callback : callbacks) {
-        removeHandler(callback);
-        delete callback;
-    }
-    return err;
-}
-
-ValueCallback *SNMPManager::addStringHandler(IPAddress ip, const char *oid, char **value)
-{
-    ValueCallback *callback = new StringCallback();
-    callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-    strcpy(callback->OID, oid);
-    ((StringCallback *)callback)->value = value;
-    callback->ip = ip;
-    addHandler(callback);
-    return callback;
-}
-
-
-ValueCallback *SNMPManager::addIntegerHandler(IPAddress ip, const char *oid, int *value)
-{
-    ValueCallback *callback = new IntegerCallback();
-    callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-    strcpy(callback->OID, oid);
-    ((IntegerCallback *)callback)->value = value;
-    ((IntegerCallback *)callback)->isFloat = false;
-    callback->ip = ip;
-    addHandler(callback);
-    return callback;
-}
-
-
-ValueCallback *SNMPManager::addFloatHandler(IPAddress ip, const char *oid, float *value)
-{
-    ValueCallback *callback = new IntegerCallback();
-    callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-    strcpy(callback->OID, oid);
-    ((IntegerCallback *)callback)->value = (int *)value;
-    ((IntegerCallback *)callback)->isFloat = true;
-    callback->ip = ip;
-    addHandler(callback);
-    return callback;
-}
-
-ValueCallback *SNMPManager::addTimestampHandler(IPAddress ip, const char *oid, uint32_t *value)
-{
-    ValueCallback *callback = new TimestampCallback();
-    callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-    strcpy(callback->OID, oid);
-    ((TimestampCallback *)callback)->value = value;
-    callback->ip = ip;
-    addHandler(callback);
-    return callback;
-}
-
-ValueCallback *SNMPManager::addOIDHandler(IPAddress ip, const char *oid, char *value)
-{
-    ValueCallback *callback = new OIDCallback();
-    callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-    ((OIDCallback *)callback)->value = value;
-    callback->ip = ip;
-    addHandler(callback);
-    return callback;
-}
-
-ValueCallback *SNMPManager::addCounter64Handler(IPAddress ip, const char *oid, uint64_t *value)
-{
-    ValueCallback *callback = new Counter64Callback();
-    callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-    strcpy(callback->OID, oid);
-    ((Counter64Callback *)callback)->value = value;
-    callback->ip = ip;
-    addHandler(callback);
-    return callback;
-}
-
-ValueCallback *SNMPManager::addCounter32Handler(IPAddress ip, const char *oid, uint32_t *value)
-{
-    ValueCallback *callback = new Counter32Callback();
-    callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-    strcpy(callback->OID, oid);
-    ((Counter32Callback *)callback)->value = value;
-    callback->ip = ip;
-    addHandler(callback);
-    return callback;
-}
-ValueCallback *SNMPManager::addGaugeHandler(IPAddress ip, const char *oid, uint32_t *value)
-{
-    ValueCallback *callback = new Gauge32Callback();
-    callback->OID = (char *)malloc((sizeof(char) * strlen(oid)) + 1);
-    strcpy(callback->OID, oid);
-    ((Gauge32Callback *)callback)->value = value;
-    callback->ip = ip;
-    addHandler(callback);
-    return callback;
-}
-
-void SNMPManager::addHandler(ValueCallback *callback)
-{
-    callbacks.push_back(callback);
-}
-
-bool SNMPManager::removeHandler(ValueCallback* callback)
-{
-    auto it = std::find(callbacks.begin(), callbacks.end(), callback);
-
-    if (it == callbacks.end())
-        return false;
-    callbacks.erase(it);      // Remove from the vector
-    return true;
-}
-
-ASNError SNMPManager::getString(const IPAddress &ip, const char *oid, char **response, uint32_t timeout, uint32_t communityVersion){
-    return request(WiFi.localIP(), std::vector<ValueCallback*>{addStringHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
-}
-
-ASNError SNMPManager::getInteger(const IPAddress &ip, const char *oid, int *response,  uint32_t timeout, uint32_t communityVersion){
-    return request(WiFi.localIP(), std::vector<ValueCallback*>{addIntegerHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
-}
-ASNError SNMPManager::getCounter32(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion){
-    return request(WiFi.localIP(), std::vector<ValueCallback*>{addCounter32Handler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
-}
-ASNError SNMPManager::getCounter64(const IPAddress &ip, const char *oid, uint64_t *response,  uint32_t timeout, uint32_t communityVersion){
-    return request(WiFi.localIP(), std::vector<ValueCallback*>{addCounter64Handler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
-}
-ASNError SNMPManager::getFloat(const IPAddress &ip, const char *oid, float *response,  uint32_t timeout, uint32_t communityVersion){
-    return request(WiFi.localIP(), std::vector<ValueCallback*>{addFloatHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
-}
-ASNError SNMPManager::getTimestamp(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion){
-    return request(WiFi.localIP(), std::vector<ValueCallback*>{addTimestampHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
-}
-ASNError SNMPManager::getOid(const IPAddress &ip, const char *oid, char *response, uint32_t timeout, uint32_t communityVersion){
-    return request(WiFi.localIP(), std::vector<ValueCallback*>{addOIDHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
-}
-ASNError SNMPManager::getGauge(const IPAddress &ip, const char *oid, uint32_t *response,  uint32_t timeout, uint32_t communityVersion){
-    return request(WiFi.localIP(), std::vector<ValueCallback*>{addGaugeHandler(ip, oid, response)}, rand() % 5555, ip, communityVersion, timeout)[0];
-}
-
-#endif
+#endif // SNMP_MANAGER_H

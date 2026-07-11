@@ -1,6 +1,8 @@
 #ifndef SNMPGetResponse_h
 #define SNMPGetResponse_h
 
+#include "BER.h"
+
 class SNMPGetResponse
 {
 

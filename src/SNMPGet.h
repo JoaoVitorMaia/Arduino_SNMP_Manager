@@ -1,5 +1,8 @@
 #ifndef SNMPGet_h
 #define SNMPGet_h
+#include <IPAddress.h>
+
+#include <Arduino_SNMP_Manager.h>
 
 enum SNMPExpect
 {
