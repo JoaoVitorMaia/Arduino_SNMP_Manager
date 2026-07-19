@@ -4,11 +4,7 @@
 #include <Arduino.h>
 #include <IPAddress.h>
 #include <Udp.h>
-#include <vector>
-#include <map>
-#include <unordered_map>
 #include <cstring>
-#include <algorithm>
 
 // Configuration macros
 #ifndef UDP_TX_PACKET_MAX_SIZE
@@ -54,6 +50,16 @@ public:
     bool received = false;
     ASNError error = ASNError::None;
 };
+
+typedef struct ValueCallbackList
+{
+    ~ValueCallbackList()
+    {
+        delete next;
+    }
+    ValueCallback *value;
+    struct ValueCallbackList *next = 0;
+} ValueCallbacks;
 
 //=============================================================================
 // Specialized Callback Classes
@@ -110,21 +116,11 @@ public:
     SNMPManager() : _community("public") {}
     explicit SNMPManager(const char* community) : _community(community) {}
     
-    // Destructor
-    ~SNMPManager() {
-        // Clean up all callbacks
-        for (auto* cb : callbacks) {
-            delete cb;
-        }
-        callbacks.clear();
-    }
-    
-    // Setup methods
+   
     void setUDP(UDP* udp);
     bool begin();
     bool loop();
     
-    // Handler management
     ValueCallback* addStringHandler(IPAddress ip, const char* oid, char** value);
     ValueCallback* addIntegerHandler(IPAddress ip, const char* oid, int* value);
     ValueCallback* addFloatHandler(IPAddress ip, const char* oid, float* value);
@@ -134,17 +130,9 @@ public:
     ValueCallback* addCounter32Handler(IPAddress ip, const char* oid, uint32_t* value);
     ValueCallback* addGaugeHandler(IPAddress ip, const char* oid, uint32_t* value);
     bool removeHandler(ValueCallback* callback);
-    
-    std::vector<ASNError> request(IPAddress localIP, std::vector<ValueCallback*> callbacks, short requestID, const IPAddress &destIP, uint32_t communityVersion, uint32_t timeout, const IPAddress &localIp);
-    
-    ASNError getString(const IPAddress& ip, const char* oid, char** response,uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
-    ASNError getInteger(const IPAddress& ip, const char* oid, int* response, uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
-    ASNError getFloat(const IPAddress& ip, const char* oid, float* response,uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
-    ASNError getTimestamp(const IPAddress& ip, const char* oid, uint32_t* response,   uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
-    ASNError getOid(const IPAddress& ip, const char* oid, char* response,uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
-    ASNError getCounter32(const IPAddress& ip, const char* oid, uint32_t* response,   uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
-    ASNError getCounter64(const IPAddress& ip, const char* oid, uint64_t* response,   uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
-    ASNError getGauge(const IPAddress& ip, const char* oid, uint32_t* response,uint32_t timeout, uint32_t communityVersion, const IPAddress &localIP);
+    void addHandler(ValueCallback* callback);
+
+
     
     bool testParsePacket(String testPacket);
     
@@ -154,11 +142,9 @@ public:
 
 private:
     unsigned char _packetBuffer[SNMP_PACKET_LENGTH * 3];
-    std::vector<ValueCallback*> callbacks;
+    ValueCallbackList* callbacks = nullptr;
     
-    // Internal methods
     ValueCallback* findCallback(const IPAddress& ip, const char* oid);
-    void addHandler(ValueCallback* callback);
     bool inline receivePacket(int length);
     bool parsePacket();
     void printPacket(int len);
